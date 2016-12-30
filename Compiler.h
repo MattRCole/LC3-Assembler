@@ -28,9 +28,8 @@ private:
 	/*Will actually carry out the hex conversion of the program.
 	  Throws many forms of CompilerException, all ment for user
 	  benifit.*/
-	void convertHex(Program&);
+	void convertP(Program&, compiler::CONVERSION);
 
-	void convertObj(Program&);
 
 	bool inBounds(int number, offset::Type offsetType);
 
@@ -47,6 +46,9 @@ private:
 
 	/*Computes hexInt for JMP and JSRR opcodes*/
 	int jmpOrJsrr(Statement&);
+
+	/*Will enter one word into the statement based on the conversion type specified*/
+	void replaceAllWords(int, Statement&, compiler::CONVERSION);
 };
 
 class CompilerException : public exception {

@@ -10,7 +10,7 @@ using namespace std;
   */
 
 namespace word {
-	enum Type { VOID, OPERATOR, OPERAND, LABEL, NUMBER, PSUDO, STRING };
+	enum Type { VOID, OPERATOR, OPERAND, LABEL, NUMBER, PSUDO, STRING, INTEGER };
 }
 
 class Word{
@@ -24,9 +24,11 @@ private:
 	bool number_;
 	bool psudo_;
 	bool string_;
+	bool int_;
 
 	word::Type type_;
 
+	int integer_;
 	int position_;
 	int decodeIndex_;
 public:
@@ -41,7 +43,7 @@ public:
 		bool operator!=(Word left, string right);
 	
 	//Default constructor.
-	Word(string word = "", word::Type type = word::VOID, int position = 0, int decodeIndex = -1);
+	Word(string word = "", word::Type type = word::VOID, int position = 0, int decodeIndex = -1, int integer = 0);
 
 	word::Type getWordType() { return type_; }
 
@@ -60,6 +62,8 @@ public:
 	bool isPsudo() { return psudo_; }
 
 	bool isString() { return string_; };
+
+	bool isInt() { return int_; }
 
 	void setDec(int decodeIndex) { decodeIndex_ = decodeIndex; };
 

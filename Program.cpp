@@ -140,6 +140,8 @@ void Program::insertAt(int index, Statement* statement)
 	catch (bad_alloc) {
 		throw(ProgramException("MEMORY EXAUSTED", statement));
 	}
+
+	size_++;
 }
 
 //Precondition: Program is not steril

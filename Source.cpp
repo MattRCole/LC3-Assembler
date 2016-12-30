@@ -2,6 +2,7 @@
 #include "StringFun.h"
 #include "Program.h"
 #include "Labeler.h"
+#include "Compiler.h"
 #include <iostream>
 #include <fstream>
 #include <string>
@@ -57,24 +58,20 @@ int main() {
 	}
 
 
-	file.close();
+	Compiler compiler;
 
-	file.open("comp_test", fstream::out | fstream::binary);
+	Program convertedHEX = compiler.convert(labeled);
 
-	if (file.fail())
-		cout << "The .obj test file has failed to open.\n";
+	file.open("TestConversionHEX.txt", fstream::out);
 
-	int* hexInt = new int;
+	if (file.fail()) {
+		cout << "TestConversionHEX.txt failed to open.\n";
+		return 0;
+	}
 
-	*hexInt = 0x3000;
-
-	file.write((char*)hexInt, 2);
-
-	*hexInt = 0x0001;
-
-	file.write((char*)hexInt, 2);
-
-	file.close();
+	for (int i = 0; i < convertedHEX.getSize(); i++) {
+		file << stringOps::getStringFromNum(convertedHEX[i].getMemLocation(), 16) << "\t" << convertedHEX[i][0].getWord() << endl;
+	}
 
 	return 0;
 }
