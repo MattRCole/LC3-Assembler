@@ -10,33 +10,15 @@ void Compiler::convert(Program* program, compiler::CONVERSION convType) {
 	if (!program->isLabled())
 		throw(CompilerException("PROGRAM NOT LABELED"));
 	
-	switch (convType) {
-	case(compiler::HEX) :
-		convertHex(*program);
-		break;
-	case(compiler::OBJ) :
-		convertObj(*program);
-		break;
-	default:
-		break;
-	};
+	
+	convert(program, convType);
 }
 
 Program Compiler::convert(Program program, compiler::CONVERSION convType) {
 	if (!program.isLabled())
 		throw(CompilerException("PROGRAM NOT LABELED"));
 	
-	switch (convType)
-	{
-	case(compiler::HEX) :
-		convertHex(program);
-		break;
-	case(compiler::OBJ) :
-		convertObj(program);
-		break;
-	default:
-		break;
-	};
+	convertP(program, convType);
 
 	return program;
 
@@ -44,10 +26,11 @@ Program Compiler::convert(Program program, compiler::CONVERSION convType) {
 
 
 
-void Compiler::convertHex(Program& program) {
+void Compiler::convertP(Program& program, compiler::CONVERSION convType) {
 	//Iterate through program replacing all words in statements
 	// with a single word per statement which is a NUMBER string in base hex
 	for (int i = 0; i < program.getSize(); i++) {
+		int hexInt = 0;
 		
 		//first, we will make sure that the first word is either a psudo op, or an operator (opcode).
 		if (program[i][0].getWordType() != word::OPERATOR && program[i][0].getWordType() != word::PSUDO)
@@ -57,7 +40,6 @@ void Compiler::convertHex(Program& program) {
 		if (program[i][0].getWordType() == word::OPERATOR) {
 			Word word = program[i][0];
 			Word hexWord = Word("", word::NUMBER, 0, number::HEX);
-			int hexInt = 0;
 			int pcOffset;
 
 			switch (word.getDec())
@@ -242,17 +224,117 @@ void Compiler::convertHex(Program& program) {
 				break;
 		/*************************************************************************************************************************/
 			default:
+
+				//the other cases are completely defined by ther HEX decode index under the opcode namespace
 				hexInt = opcode::HEX[word.getDec()];
 				break;
 			}
-			//Clear all words from statement and add hexnumber with no preceding character to statement.
-			program[i].clearWords();
 
-			program[i].addWord(new Word(stringOps::getStringFromNum(hexInt, 16), word::NUMBER, 0, number::HEX));
+			replaceAllWords(hexInt, program[i], convType);
+
 		}
 
+/*****************************PSUDO OP EVALUATION***************************************************************************************/
+		else {
+			//determine psudo op type, do nothing for .EXTERNAL, but throw errors for .ORIG and .END
+			if (program[i][0] == ".BLKW") {
+				//there can be 1-3 words in this statement. report errors if necesary
+				if (program[i].getWordCount() > 3)
+					throw(CompilerException("UNEXPECTED WORD, PSUDO OP ONLY SUPPORTS 2 OPERANDS", new Statement(program[i]), 3));
+				if (program[i].getWordCount() == 1) {
+					//effectivly do nothing but add a blank space to the program.
+					replaceAllWords(hexInt, program[i], convType);
+				}
+				else {
+					//if we have three words in the statement, the third will be a number which will be used to fill
+					//a given number of statements preceeding this statement determined by the number contained in the second word of the
+					//statement
+					if (program[i].getWordCount() == 3)
+					{
+						//check third word to make sure it's a number
+						if (!program[i][2].isNumber())
+							throw(CompilerException("NUMBER OR LABEL EXPECTED", new Statement(program[i]), 2));
 
+						//set fill number
+						hexInt = stringOps::getNumberFromWord(program[i][2]);
+					}
+
+					if (!program[i][1].isNumber())
+						throw(CompilerException("NUMBER EXPECTED", new Statement(program[i]), 1));
+
+					int iterCnt = stringOps::getNumberFromWord(program[i][1]);
+
+					//insert new statement(s) containing desired hexInt into the program while maintaining
+					// the current statement position in the program.
+					Statement* blockStatement = nullptr;
+					Word* blockWord = nullptr;
+					for (int j = 0; j < (iterCnt - 1); j++) {
+						switch (convType) {
+						case(compiler::HEX):
+							blockWord = new Word(stringOps::getStringFromNum(hexInt, 16), word::NUMBER, 0, number::HEX);
+							break;
+						case(compiler::OBJ) :
+							blockWord = new Word("", word::INTEGER, 0, -1, hexInt);
+							break;
+						}
+						blockStatement = new Statement();
+						blockStatement->addWord(blockWord);
+
+						program.insertAt(i, blockStatement);
+						//we still want to point at the statement that is currently being evaluated.
+						i++;
+					}
+
+					//For the last (or frindge case first) insertion, we will clear the currently evaluated
+					// Statement and add the desired conversion type word
+					replaceAllWords(hexInt, program[i], convType);
+				}
+			}
+			else if (program[i][0] == ".FILL") {
+				//check to make sure there are only two words in the statement and report as necesary
+				if (program[i].getWordCount() > 2)
+					throw(CompilerException("UNEXPECTED WORD, PSUDO OP ONLY SUPPORTS ONE OPERAND", new Statement(program[i]), 2));
+				if (program[i].getWordCount() < 2)
+					throw(CompilerException("NUMBER OR LABEL EXPECTED", new Statement(program[i]), 0));
+
+				//report if word is not number
+				if (!program[i][1].isNumber())
+					throw(CompilerException("UNEXPECTED WORD, LABEL OR NUMBER EXPECTED", new Statement(program[i]), 1));
+				replaceAllWords(stringOps::getNumberFromWord(program[i][1]), program[i], convType);
+			}
+			else if (program[i][0] == ".STRINGZ" || program[i][0] == ".STRINGz") {
+				//check to make sure following word is of string type and exists. Report as necessary
+				if (program[i].getWordCount() > 2)
+					throw(CompilerException("UNEXPECTED WORD, PSUDO OP ONLY SUPPORTS 1 OPERAND", new Statement(program[i]), 2));
+				if (program[i].getWordCount() < 2)
+					throw(CompilerException("STRING EXPECTED", new Statement(program[i]), 0));
+				if (!program[i][1].isString())
+					throw(CompilerException("UNEXPECTED WORD, STRING EXPECTED", new Statement(program[i]), 1));
+
+
+				//Add new statements into the program filled with characters from string. 
+
+				Statement* stringStatement = nullptr;
+				for (int j = 0; j < program[i][1].size(); j++) {
+					stringStatement = new Statement();
+					replaceAllWords(static_cast<int>(program[i][1].getWord().at(j)), *stringStatement, convType);
+					
+					program.insertAt(i, stringStatement);
+					i++;
+				}
+
+				//Terminate with null memory location
+				replaceAllWords(0, program[i], convType);
+
+			}
+			else if (program[i][0] != ".EXTERNAL") 
+				throw(CompilerException("UNEXPECTED PSUDO OP: .END or .ORIG, ONLY ONE CALL TO THESE PSUDO OPS CAN BE MADE", new Statement(program[i]), 0));
+		}
 	}
+
+
+	//All done converting
+	return;
 }
 
 bool Compiler::inBounds(int number, offset::Type offsetType) {
@@ -380,4 +462,23 @@ int Compiler::jmpOrJsrr(Statement &statement)
 	hexInt = operand::BaseR_HEX[reg.getDec()];
 
 	return hexInt;
+}
+
+
+void Compiler::replaceAllWords(int hexInt, Statement& statement, compiler::CONVERSION convType) {
+	switch (convType)
+	{
+	case(compiler::HEX) :
+		//Clear all words from statement and add hexnumber with no preceding character to statement.
+		statement.clearWords();
+
+		statement.addWord(new Word(stringOps::getStringFromNum(hexInt, 16), word::NUMBER, 0, number::HEX));
+		break;
+	case(compiler::OBJ) :
+		//Clear all words from statement and add integer word to statement.
+		statement.clearWords();
+
+		statement.addWord(new Word("", word::INTEGER, 0, -1, hexInt));
+		break;
+	}
 }

@@ -1,12 +1,13 @@
 #include "Word.h"
 using namespace std;
 
-Word::Word(string word, word::Type type, int position, int decodeIndex)
+Word::Word(string word, word::Type type, int position, int decodeIndex, int integer)
 {
 	word_ = word;
 	type_ = type;
 	position_ = position;
 	decodeIndex_ = decodeIndex;
+	integer_ = integer;
 
 	switch (type) {
 	case(word::OPERATOR) :
@@ -16,6 +17,7 @@ Word::Word(string word, word::Type type, int position, int decodeIndex)
 		void_ = false;
 		number_ = false;
 		psudo_ = false;
+		int_ = false;
 		break;
 	case(word::OPERAND) :
 		operand_ = true;
@@ -24,6 +26,7 @@ Word::Word(string word, word::Type type, int position, int decodeIndex)
 		void_ = false;
 		number_ = false;
 		psudo_ = false;
+		int_ = false;
 		break;
 	case(word::LABEL) :
 		label_ = true;
@@ -32,6 +35,7 @@ Word::Word(string word, word::Type type, int position, int decodeIndex)
 		void_ = false;
 		number_ = false;
 		psudo_ = false;
+		int_ = false;
 		break;
 	case(word::NUMBER) :
 		number_ = true;
@@ -40,6 +44,7 @@ Word::Word(string word, word::Type type, int position, int decodeIndex)
 		label_ = false;
 		void_ = false;
 		psudo_ = false;
+		int_ = false;
 		break;
 	case(word::PSUDO) :
 		psudo_ = true;
@@ -48,6 +53,7 @@ Word::Word(string word, word::Type type, int position, int decodeIndex)
 		operand_ = false;
 		label_ = false;
 		number_ = false;
+		int_ = false;
 		break;
 	case(word::STRING) :
 		string_ = true;
@@ -55,6 +61,16 @@ Word::Word(string word, word::Type type, int position, int decodeIndex)
 		operator_ = false;
 		operand_ = false;
 		label_ = false;
+		number_ = false;
+		psudo_ = false;
+		int_ = false;
+		break;
+	case(word::INTEGER) :
+		int_ = true;
+		operator_ = false;
+		operand_ = false;
+		label_ = false;
+		void_ = false;
 		number_ = false;
 		psudo_ = false;
 		break;
@@ -65,6 +81,7 @@ Word::Word(string word, word::Type type, int position, int decodeIndex)
 		label_ = false;
 		number_ = false;
 		psudo_ = false;
+		int_ = false;
 		break;
 	}
 
