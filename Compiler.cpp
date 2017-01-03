@@ -48,7 +48,15 @@ void Compiler::convertP(Program& program, compiler::CONVERSION convType) {
 			case(opcode::BR) :
 				//test to see what type of BR we have (IE: BRn, or BRzp) simple BR will be assumed as BRnzp
 
-				//first, we will see if the string is of two characters, if so, we are dealing with an assumed
+
+				//validate the ammount of words in the statement.
+				if (program[i].getWordCount() > 2)
+					throw(CompilerException("UNEXPECTED WORD. OPCODE ONLY SUPPORTS TWO OPERANDS", new Statement(program[i]), 2));
+				if (program[i].getWordCount() < 2)
+					throw(CompilerException("NUMBER OR LABEL EXPECTED", new Statement(program[i]), 1));
+
+
+				//we will see if the string is of two characters, if so, we are dealing with an assumed
 				// BRnzp and will add to the hexInt appropriately
 				if (word.getWord().size() == 2)
 					hexInt = opcode::BR_COND[opcode::NZP];
@@ -71,22 +79,17 @@ void Compiler::convertP(Program& program, compiler::CONVERSION convType) {
 				//NZP conditions added, we will now add the PCoffset9 after checking for bounds.
 
 				//check to make sure that the second word in current statement is a number, and add it to the hexInt
-				if (program[i].getWordCount() > 1 || !program[i][2].isNumber())
-					throw(CompilerException("NUMBER OR LABEL EXPECTED"), &program[i], 2);
+				if (!program[i][1].isNumber())
+					throw(CompilerException("UNEXPECTED WORD, NUMBER OR LABEL EXPECTED"), &program[i], 1);
 
-				//If a number is present, check its bounds
-				if (program[i].getWordCount() > 1) {
-					pcOffset = stringOps::getNumberFromWord(program[i][2]);
-					if (!inBounds(pcOffset, offset::NINE))
-						throw(CompilerException("NUMBER OUT OF PCOFFSET9 BOUNDS", new Statement(program[i]), 1));
-					
-					hexInt += pcOffset;
+				pcOffset = stringOps::getNumberFromWord(program[i][1]);
+				
+				if (!inBounds(pcOffset, offset::NINE))
+					throw(CompilerException("NUMBER OUT OF PCOFFSET9 BOUNDS", new Statement(program[i]), 1));
+				
+				hexInt += pcOffset;
 
-					//if more than two words are in the statement, we will report up.
-					if (program[i].getWordCount() > 2)
-						throw(CompilerException("UNEXPECTED WORD(S)", new Statement(program[i]), 2));
-
-				}
+				
 
 				//if no following words are found, we will add zero to the hexInt
 				break;
