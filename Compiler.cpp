@@ -87,6 +87,10 @@ void Compiler::convertP(Program& program, compiler::CONVERSION convType) {
 				if (!inBounds(pcOffset, offset::NINE))
 					throw(CompilerException("NUMBER OUT OF PCOFFSET9 BOUNDS", new Statement(program[i]), 1));
 				
+				//if pcOffset is negative, we must concatinate the two's compliment down to nine bits.
+				if (pcOffset < 0)
+					pcOffset = pcOffset & offset::N_ISOLATION[offset::NINE];
+
 				hexInt += pcOffset;
 
 				
@@ -123,7 +127,7 @@ void Compiler::convertP(Program& program, compiler::CONVERSION convType) {
 				/******************************************JSR OPCODE(4)***********************************************/
 			case(opcode::JSR) :
 				hexInt = opcode::HEX[opcode::ST];
-
+				int pcOffset;
 				//check ammount of words and valitity of words
 				if (program[i].getWordCount() > 2)
 					throw(CompilerException("UNEXPECTED WORD(S), OPCODE ONLY SUPPORTS 1 OPERAND", new Statement(program[i]), 2));
@@ -134,11 +138,19 @@ void Compiler::convertP(Program& program, compiler::CONVERSION convType) {
 				if (!program[i][1].isNumber())
 					throw(CompilerException("UNEXPECTED WORD, LABEL OR NUMBER EXPECED", new Statement(program[i]), 1));
 
-				if (!inBounds(stringOps::getNumberFromWord(program[i][1]), offset::ELEVEN))
+				//get pcoffset and check bounds
+
+				pcOffset = stringOps::getNumberFromWord(program[i][1]);
+
+				if (!inBounds((pcOffset), offset::ELEVEN))
 					throw(CompilerException("NUMBER OUTSIDE OF OFFSET11 BOUNDS", new Statement(program[i]), 1));
 
+
+				//concatinate offset11 if necesary
+				if (pcOffset < 0)
+					pcOffset = pcOffset & offset::N_ISOLATION[offset::ELEVEN];
 				//if all qualifications are met, add offset11 to hexInt
-				hexInt += stringOps::getNumberFromWord(program[i][1]);
+				hexInt += pcOffset;
 				break;
 
 				/****************************************AND OPCODE(5)*************************************************/
@@ -240,6 +252,8 @@ void Compiler::convertP(Program& program, compiler::CONVERSION convType) {
 /*****************************PSUDO OP EVALUATION***************************************************************************************/
 		else {
 			//determine psudo op type, do nothing for .EXTERNAL, but throw errors for .ORIG and .END
+
+			/**********************************BLKW************************************************************************************/
 			if (program[i][0] == ".BLKW") {
 				//there can be 1-3 words in this statement. report errors if necesary
 				if (program[i].getWordCount() > 3)
@@ -283,6 +297,9 @@ void Compiler::convertP(Program& program, compiler::CONVERSION convType) {
 						blockStatement = new Statement();
 						blockStatement->addWord(blockWord);
 
+						//accurately set memory location
+						blockStatement->setMemLocation(i);
+
 						program.insertAt(i, blockStatement);
 						//we still want to point at the statement that is currently being evaluated.
 						i++;
@@ -291,8 +308,13 @@ void Compiler::convertP(Program& program, compiler::CONVERSION convType) {
 					//For the last (or frindge case first) insertion, we will clear the currently evaluated
 					// Statement and add the desired conversion type word
 					replaceAllWords(hexInt, program[i], convType);
+
+					//set accurate mem location for final statement
+					program[i].setMemLocation(i);
 				}
 			}
+
+			/***********************************FILL*******************************************************************/
 			else if (program[i][0] == ".FILL") {
 				//check to make sure there are only two words in the statement and report as necesary
 				if (program[i].getWordCount() > 2)
@@ -305,6 +327,8 @@ void Compiler::convertP(Program& program, compiler::CONVERSION convType) {
 					throw(CompilerException("UNEXPECTED WORD, LABEL OR NUMBER EXPECTED", new Statement(program[i]), 1));
 				replaceAllWords(stringOps::getNumberFromWord(program[i][1]), program[i], convType);
 			}
+
+			/************************************STRINGZ**************************************************************/
 			else if (program[i][0] == ".STRINGZ" || program[i][0] == ".STRINGz") {
 				//check to make sure following word is of string type and exists. Report as necessary
 				if (program[i].getWordCount() > 2)
@@ -322,12 +346,18 @@ void Compiler::convertP(Program& program, compiler::CONVERSION convType) {
 					stringStatement = new Statement();
 					replaceAllWords(static_cast<int>(program[i][1].getWord().at(j)), *stringStatement, convType);
 					
+					//set memory location
+					stringStatement->setMemLocation(i + program[0].getMemLocation());
+
 					program.insertAt(i, stringStatement);
 					i++;
 				}
 
 				//Terminate with null memory location
 				replaceAllWords(0, program[i], convType);
+
+				//set memory location
+				program[i].setMemLocation(i);
 
 			}
 			else if (program[i][0] != ".EXTERNAL") 
@@ -375,10 +405,14 @@ int Compiler::addOrAnd(Statement &statement) {
 		if (!inBounds(stringOps::getNumberFromWord(imm5), offset::FIVE))
 			throw(CompilerException("NUMBER IS NOT WITHIN IMM5 BOUNDS"), new Statement(statement), 3);
 
+		int imm5off = stringOps::getNumberFromWord(imm5);
+
+		if (imm5off < 0)
+			imm5off = imm5off & offset::N_ISOLATION[offset::FIVE];
 		//add the imm5 select code
 		hexInt += operand::IMM5_SELECT;
 
-		hexInt += stringOps::getNumberFromWord(imm5);
+		hexInt += imm5off;
 	}
 	else
 		hexInt += operand::SR2_HEX[statement[3].getDec()];
@@ -407,7 +441,7 @@ int Compiler::memoryNineOffset(Statement &statement) {
 		throw(CompilerException("NUMBER IS OUTSIDE OF OFFSET9 BOUNDS"), new Statement(statement), 2);
 
 	hexInt += operand::DR_HEX[statement[1].getDec()];
-	hexInt += stringOps::getNumberFromWord(statement[2]);
+	hexInt += (offset::N_ISOLATION[offset::NINE] & stringOps::getNumberFromWord(statement[2]));
 
 	return hexInt;
 }
@@ -438,7 +472,8 @@ int Compiler::memorySixOffset(Statement &statement)
 		if (!inBounds(stringOps::getNumberFromWord(statement[3]), offset::SIX))
 			throw(CompilerException("NUMBER IS OUTSIDE OF OFFSET6 BOUNDS"), new Statement(statement), 3);
 
-		hexInt += stringOps::getNumberFromWord(statement[3]);
+		//isolate the appropriate bitsr
+		hexInt += (offset::N_ISOLATION[offset::SIX] & stringOps::getNumberFromWord(statement[3]));
 	}
 
 

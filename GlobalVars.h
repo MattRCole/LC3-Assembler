@@ -41,8 +41,10 @@ namespace compiler {
 
 namespace offset {
 	static const int COUNT = 5;
-	enum Type                            { ERROR, FIVE, SIX, NINE, ELEVEN};
-	static const int POS_BOUNDS[COUNT] = { 0,     15,   31,  255,  1023 };
-	static const int NEG_BOUDNS[COUNT] = { 0,    -16,  -32, -256, -1024 };
+	enum Type                             { ERROR, FIVE, SIX, NINE, ELEVEN};
+	static const int POS_BOUNDS[COUNT]  = { 0,     15,   31,  255,  1023 };
+	static const int NEG_BOUDNS[COUNT]  = { 0,    -16,  -32, -256, -1024 };
+
+	static const int N_ISOLATION[COUNT] = { 0,     31,   63,  511,  2047 };
 
 }

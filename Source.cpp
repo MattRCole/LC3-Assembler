@@ -43,11 +43,13 @@ int main() {
 
 	delete program;
 
+	file.close();
 
+	Labeler labeler;
 
-	Labeler* labeler = new Labeler(*steril);
+	
 
-	Program labeled = labeler->getLabeled();
+	Program labeled = labeler.getLabeled(*steril);
 
 	for (int i = 0; i < labeled.getSize(); i++) {
 		file << stringOps::getStringFromNum(labeled[i].getMemLocation(), 16) << "\t";
