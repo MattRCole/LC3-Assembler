@@ -1,8 +1,8 @@
-# LC3-Compiler
-A Compiler for the LC3 assembly language. Compiles to both the Logisim LC3 2.0 and LC3 Simulate
+# LC3-Assembler
+An Assembler for the LC3 assembly language. Assembles to both the Logisim LC3 2.0 and LC3 Simulate
 
 
-The guts and gore of the LC3 to Logisim compiler:
+The guts and gore of the LC3 to Logisim asembler:
 
 
 -------------------------------------Data Structures---------------------------------------------------------------------------
